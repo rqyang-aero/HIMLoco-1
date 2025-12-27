@@ -37,9 +37,9 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 from rsl_rl.algorithms import PPO, HIMPPO
-from rsl_rl.modules import HIMActorCritic
+from rsl_rl.modules import AttnActorCritic
 from rsl_rl.env import VecEnv
-
+import wandb
 
 class HIMOnPolicyRunner:
 
@@ -47,11 +47,15 @@ class HIMOnPolicyRunner:
                  env: VecEnv,
                  train_cfg,
                  log_dir=None,
+                 wandb_run_name=None,
+                 all_config=None,
                  device='cpu'):
 
         self.cfg=train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
+        self.all_config = all_config
+        self.wandb_run_name = wandb_run_name
         self.device = device
         self.env = env
         if self.env.num_privileged_obs is not None:
@@ -60,12 +64,28 @@ class HIMOnPolicyRunner:
             num_critic_obs = self.env.num_obs
         self.num_actor_obs = self.env.num_obs
         self.num_critic_obs = num_critic_obs
-        actor_critic_class = eval(self.cfg["policy_class_name"]) # HIMActorCritic
-        actor_critic: HIMActorCritic = actor_critic_class( self.env.num_obs,
+        actor_critic_class = eval(self.cfg["policy_class_name"]) # HMActorCritic
+        # actor_critic: HMActorCritic = actor_critic_class( self.env.num_obs,
+        #                                                 num_critic_obs,
+        #                                                 self.env.num_one_step_obs,
+        #                                                 self.env.num_actions,
+        #                                                 self.env.num_height_map_scans,
+        #                                                 **self.policy_cfg).to(self.device)
+        
+        actor_critic: AttnActorCritic = actor_critic_class( self.env.num_obs,
                                                         num_critic_obs,
                                                         self.env.num_one_step_obs,
                                                         self.env.num_actions,
+                                                        self.env.num_height_map_scans,
+                                                        self.env.height_map_shape,
+                                                        self.env.height_map_real_H,
                                                         **self.policy_cfg).to(self.device)
+        
+        param = 0
+        for name, p in actor_critic.named_parameters():
+            param += p.numel()
+        print(f"Number of actor-critic parameters: {param/1e6:.2f}M")
+        
         alg_class = eval(self.cfg["algorithm_class_name"]) # HIMPPO
         self.alg: HIMPPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
@@ -86,6 +106,7 @@ class HIMOnPolicyRunner:
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
         if self.log_dir is not None and self.writer is None:
+            wandb.init(project=self.all_config['runner']['project_name'], name=self.wandb_run_name, sync_tensorboard=True, config=self.all_config)
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf, high=int(self.env.max_episode_length))
@@ -139,7 +160,7 @@ class HIMOnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
                 
-            mean_value_loss, mean_surrogate_loss, mean_estimation_loss, mean_swap_loss = self.alg.update()
+            mean_value_loss, mean_surrogate_loss, mean_estimation_loss = self.alg.update()
             stop = time.time()
             learn_time = stop - start
             if self.log_dir is not None:
@@ -176,7 +197,7 @@ class HIMOnPolicyRunner:
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
         self.writer.add_scalar('Loss/Estimation Loss', locs['mean_estimation_loss'], locs['it'])
-        self.writer.add_scalar('Loss/Swap Loss', locs['mean_swap_loss'], locs['it'])
+        # self.writer.add_scalar('Loss/Swap Loss', locs['mean_swap_loss'], locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.alg.learning_rate, locs['it'])
         self.writer.add_scalar('Policy/mean_noise_std', mean_std.item(), locs['it'])
         self.writer.add_scalar('Perf/total_fps', fps, locs['it'])
@@ -198,7 +219,7 @@ class HIMOnPolicyRunner:
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
                           f"""{'Estimation loss:':>{pad}} {locs['mean_estimation_loss']:.4f}\n"""
-                          f"""{'Swap loss:':>{pad}} {locs['mean_swap_loss']:.4f}\n"""
+                        #   f"""{'Swap loss:':>{pad}} {locs['mean_swap_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")
@@ -212,7 +233,7 @@ class HIMOnPolicyRunner:
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
                           f"""{'Estimation loss:':>{pad}} {locs['mean_estimation_loss']:.4f}\n"""
-                          f"""{'Swap loss:':>{pad}} {locs['mean_swap_loss']:.4f}\n"""
+                        #   f"""{'Swap loss:':>{pad}} {locs['mean_swap_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")
                         #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                         #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
@@ -230,7 +251,7 @@ class HIMOnPolicyRunner:
         torch.save({
             'model_state_dict': self.alg.actor_critic.state_dict(),
             'optimizer_state_dict': self.alg.optimizer.state_dict(),
-            'estimator_optimizer_state_dict': self.alg.actor_critic.estimator.optimizer.state_dict(),
+            # 'estimator_optimizer_state_dict': self.alg.actor_critic.estimator.optimizer.state_dict(),
             'iter': self.current_learning_iteration,
             'infos': infos,
             }, path)
@@ -240,7 +261,7 @@ class HIMOnPolicyRunner:
         self.alg.actor_critic.load_state_dict(loaded_dict['model_state_dict'])
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
-            self.alg.actor_critic.estimator.optimizer.load_state_dict(loaded_dict['estimator_optimizer_state_dict'])
+            # self.alg.actor_critic.estimator.optimizer.load_state_dict(loaded_dict['estimator_optimizer_state_dict'])
         self.current_learning_iteration = loaded_dict['iter']
         return loaded_dict['infos']
 

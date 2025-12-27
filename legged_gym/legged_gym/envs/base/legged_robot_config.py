@@ -35,7 +35,11 @@ class LeggedRobotCfg(BaseConfig):
         num_envs = 4096
         num_one_step_observations = 45
         num_observations = num_one_step_observations * 6
-        num_one_step_privileged_obs = 45 + 3 + 3 + 187 # additional: base_lin_vel, external_forces, scan_dots
+        height_map_shape = (1, 19, 11) # (channels, height, width)
+        num_height_map_scans = height_map_shape[0] * height_map_shape[1] * height_map_shape[2]
+        num_additional_obs = 3 + 3
+        num_one_step_privileged_obs = 45 + num_additional_obs + num_height_map_scans # additional: base_lin_vel, external_forces, scan_dots
+        height_map_real_H = 11
         num_privileged_obs = num_one_step_privileged_obs * 1 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -44,27 +48,30 @@ class LeggedRobotCfg(BaseConfig):
 
     class terrain:
         mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
-        horizontal_scale = 0.1 # [m]
-        vertical_scale = 0.005 # [m]
-        border_size = 25 # [m]
-        curriculum = True
-        static_friction = 1.0
-        dynamic_friction = 1.0
-        restitution = 0.
+        horizontal_scale = 0.1 # [m] ## 水平方向的分辨率
+        vertical_scale = 0.005 # [m] ## 垂直方向的分辨率
+        border_size = 25 # [m] ## 生成局部地形边界的大小
+        curriculum = True ## 是否使用课程，课程的含义就是当机器人在当前环境下运行情况较好后，增加地形的难度，指令的难度（比如速度更高等）
+        static_friction = 1.0  ## 静摩擦
+        dynamic_friction = 1.0  ## 滑动摩擦
+        restitution = 0.  ## 误差补偿
         # rough terrain only:
         measure_heights = True
-        measured_points_x = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8] # 1mx1.6m rectangle (without center line)
+        ## 量测一个1.6*1m的矩形区域内的高度信息，用于机器人感知地形
+        measured_points_x = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] # 1mx1.6m rectangle (without center line)
         measured_points_y = [-0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5]
-        selected = False # select a unique terrain type and pass all arguments
+        selected = False # select a unique terrain type and pass all arguments  ## 是否选择一个单一的独特的地形
         terrain_kwargs = None # Dict of arguments for selected terrain
-        max_init_terrain_level = 5 # starting curriculum state
+        max_init_terrain_level = 5 # starting curriculum state  ## 初始化地形的状态等级
         terrain_length = 8.
         terrain_width = 8.
-        num_rows= 10 # number of terrain rows (levels)
-        num_cols = 20 # number of terrain cols (types)
+        num_rows= 10 # number of terrain rows (levels)  ## 生成的各种地形块，有几行 
+        num_cols = 20 # number of terrain cols (types)  ## 生成的各种地形块，有几列
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
-        terrain_proportions = [0.1, 0.2, 0.3, 0.3, 0.1]
-        # trimesh only:
+        ## 地形类别包含：平坦坡，崎岖坡，正台阶，负台阶，离散地形
+		## 各种地形类型所占比例
+        terrain_proportions = [0.1, 0.1, 0.3, 0.3, 0.2]
+        # trimesh only: ## 当坡度大于该阈值后直接修正成垂直墙
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
 
     class commands:
@@ -240,6 +247,8 @@ class LeggedRobotCfgPPO(BaseConfig):
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [512, 256, 128]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+        self_attn = False
+        vel_est = False
         # only for 'ActorCriticRecurrent':
         # rnn_type = 'lstm'
         # rnn_hidden_size = 512
@@ -261,12 +270,13 @@ class LeggedRobotCfgPPO(BaseConfig):
         max_grad_norm = 1.
 
     class runner:
-        policy_class_name = 'HIMActorCritic'
+        policy_class_name = 'AttnActorCritic'
         algorithm_class_name = 'HIMPPO'
-        num_steps_per_env = 100 # per iteration
+        num_steps_per_env = 24 # per iteration
         max_iterations = 200000 # number of policy updates
 
         # logging
+        project_name = 'VisualLoco'
         save_interval = 20 # check for potential saves every this many iterations
         experiment_name = 'test'
         run_name = ''

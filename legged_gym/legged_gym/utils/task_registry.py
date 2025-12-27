@@ -128,23 +128,38 @@ class TaskRegistry():
             if name is None:
                 raise ValueError("Either 'name' or 'train_cfg' must be not None")
             # load config files
-            _, train_cfg = self.get_cfgs(name)
+            env_cfg, train_cfg = self.get_cfgs(name)
         else:
             if name is not None:
                 print(f"'train_cfg' provided -> Ignoring 'name={name}'")
+            env_cfg = None
         # override cfg from args (if specified)
-        _, train_cfg = update_cfg_from_args(None, train_cfg, args)
-
+        env_cfg, train_cfg = update_cfg_from_args(env_cfg, train_cfg, args)
+        
         if log_root=="default":
             log_root = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name)
             log_dir = os.path.join(log_root, datetime.now().strftime('%b%d_%H-%M-%S') + '_' + train_cfg.runner.run_name)
+            wandb_run_name = (datetime.now().strftime('%b%d_%H-%M-%S') 
+                              + '_' + train_cfg.runner.experiment_name 
+                              + '_' + train_cfg.runner.run_name)
         elif log_root is None:
             log_dir = None
+            wandb_run_name = (datetime.now().strftime('%b%d_%H-%M-%S') 
+                              + '_' + train_cfg.runner.experiment_name 
+                              + '_' + train_cfg.runner.run_name)
         else:
             log_dir = os.path.join(log_root, datetime.now().strftime('%b%d_%H-%M-%S') + '_' + train_cfg.runner.run_name)
+            wandb_run_name = (datetime.now().strftime('%b%d_%H-%M-%S') 
+                              + '_' + train_cfg.runner.experiment_name 
+                              + '_' + train_cfg.runner.run_name)
         
         train_cfg_dict = class_to_dict(train_cfg)
-        runner = HIMOnPolicyRunner(env, train_cfg_dict, log_dir, device=args.rl_device)
+        if env_cfg is not None:
+            env_cfg_dict = class_to_dict(env_cfg)
+            cfg_dict = {**env_cfg_dict, **train_cfg_dict} # **表示将字典扩展为关键字参数 
+        else:
+            cfg_dict = train_cfg_dict
+        runner = HIMOnPolicyRunner(env, train_cfg_dict, log_dir, wandb_run_name=wandb_run_name, all_config=cfg_dict, device=args.rl_device)
         #save resume path before creating a new log_dir
         resume = train_cfg.runner.resume
         if resume:

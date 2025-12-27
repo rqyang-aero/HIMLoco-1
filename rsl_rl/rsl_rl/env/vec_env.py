@@ -39,6 +39,9 @@ class VecEnv(ABC):
     num_privileged_obs: int
     num_actions: int
     max_episode_length: int
+    num_height_map_scans: int
+    height_map_shape: Tuple[int, int, int]
+    height_map_real_H: int
     privileged_obs_buf: torch.Tensor
     obs_buf: torch.Tensor 
     rew_buf: torch.Tensor

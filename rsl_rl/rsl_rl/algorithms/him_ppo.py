@@ -34,9 +34,10 @@ import torch.optim as optim
 
 from rsl_rl.modules import HIMActorCritic
 from rsl_rl.storage import HIMRolloutStorage
+from rsl_rl.modules import AttnActorCritic
 
 class HIMPPO:
-    actor_critic: HIMActorCritic
+    actor_critic: AttnActorCritic
     def __init__(self,
                  actor_critic,
                  num_learning_epochs=1,
@@ -89,7 +90,7 @@ class HIMPPO:
 
     def act(self, obs, critic_obs):
         # Compute the actions and values
-        self.transition.actions = self.actor_critic.act(obs).detach()
+        self.transition.actions = self.actor_critic.act(obs, critic_obs).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
@@ -120,14 +121,14 @@ class HIMPPO:
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_estimation_loss = 0
-        mean_swap_loss = 0
+        # mean_swap_loss = 0
         
         generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
 
         for obs_batch, critic_obs_batch, actions_batch, next_critic_obs_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
             old_mu_batch, old_sigma_batch in generator:
                 
-                self.actor_critic.act(obs_batch)
+                self.actor_critic.act(obs_batch, critic_obs_batch)  # to update the distribution
                 actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
                 value_batch = self.actor_critic.evaluate(critic_obs_batch)
                 mu_batch = self.actor_critic.action_mean
@@ -150,7 +151,11 @@ class HIMPPO:
                             param_group['lr'] = self.learning_rate
 
                 #Estimator Update
-                estimation_loss, swap_loss = self.actor_critic.estimator.update(obs_batch, next_critic_obs_batch, lr=self.learning_rate)
+                # estimation_loss, swap_loss = self.actor_critic.estimator.update(obs_batch, next_critic_obs_batch, lr=self.learning_rate)
+                
+                # estimation_loss = self.actor_critic.get_vel_loss(obs_batch, next_critic_obs_batch) 
+                
+                estimation_loss = self.actor_critic.get_vel_loss(obs_batch, critic_obs_batch, next_critic_obs_batch)
 
                 # Surrogate loss
                 ratio = torch.exp(actions_log_prob_batch - torch.squeeze(old_actions_log_prob_batch))
@@ -169,7 +174,7 @@ class HIMPPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimation_loss
 
                 # Gradient step
                 self.optimizer.zero_grad()
@@ -180,13 +185,13 @@ class HIMPPO:
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surrogate_loss.item()
                 mean_estimation_loss += estimation_loss
-                mean_swap_loss += swap_loss
+                # mean_swap_loss += swap_loss
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_estimation_loss /= num_updates
-        mean_swap_loss /= num_updates
+        # mean_swap_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, estimation_loss, swap_loss
+        return mean_value_loss, mean_surrogate_loss, mean_estimation_loss

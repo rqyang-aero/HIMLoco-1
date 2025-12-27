@@ -61,6 +61,9 @@ class BaseTask():
         self.num_obs = cfg.env.num_observations
         self.num_privileged_obs = cfg.env.num_privileged_obs
         self.num_actions = cfg.env.num_actions
+        self.num_height_map_scans = cfg.env.num_height_map_scans
+        self.height_map_shape = cfg.env.height_map_shape
+        self.height_map_real_H = cfg.env.height_map_real_H
 
         # optimization flags for pytorch JIT
         torch._C._jit_set_profiling_mode(False)
