@@ -35,6 +35,7 @@ import torch.optim as optim
 from rsl_rl.modules import HIMActorCritic
 from rsl_rl.modules import AttnActorCritic 
 from rsl_rl.storage import HIMRolloutStorage
+from rsl_rl.modules import AttnActorCritic
 
 class HIMPPO:
     # actor_critic: HIMActorCritic

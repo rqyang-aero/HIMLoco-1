@@ -176,7 +176,7 @@ def get_args():
     # name allignment
     # args.sim_device_id = args.compute_device_id
     args.sim_device = args.rl_device
-    args.headless = True
+    # args.headless = True
     # if args.sim_device=='cuda':
     #     args.sim_device += f":{args.sim_device_id}"
     return args

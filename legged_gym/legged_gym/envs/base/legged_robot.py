@@ -516,6 +516,21 @@ class LeggedRobot(BaseTask):
 
         # set small commands to zero
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        
+        # self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # lin_vel_y_bound = torch.where(1. / (self.commands[env_ids, 0].abs() + 1e-6)**2 > self.command_ranges["lin_vel_y"][1],
+        #                               self.command_ranges["lin_vel_y"][1], 1. / (self.commands[env_ids, 0].abs() + 1e-6)**2)
+        # self.commands[env_ids, 1] = lin_vel_y_bound * torch_rand_float(-1, 1, (len(env_ids), 1), device=self.device).squeeze(1)
+
+        # if self.cfg.commands.heading_command:
+        #     self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # else:
+        #     self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+
+        # # set small commands to zero
+        # self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        
+        
 
         # print(compute_rpy_from_local_vectors(self.forward_vec_loc, self.right_vec_loc, self.up_vec_loc)[0][0])
 
@@ -631,6 +646,7 @@ class LeggedRobot(BaseTask):
         high_vel_env_ids = env_ids[high_vel_env_ids.nonzero(as_tuple=True)]
         # If the tracking reward is above 80% of the maximum, increase the range of commands
         if (torch.mean(self.episode_sums["tracking_lin_vel"][low_vel_env_ids]) / self.max_episode_length > 0.8 * self.reward_scales["tracking_lin_vel"]) and (torch.mean(self.episode_sums["tracking_lin_vel"][high_vel_env_ids]) / self.max_episode_length > 0.8 * self.reward_scales["tracking_lin_vel"]):
+        # if (torch.mean(self.episode_sums["tracking_lin_vel"][env_ids]) / self.max_episode_length > 0.8 * self.reward_scales["tracking_lin_vel"]):    
             self.command_ranges["lin_vel_x"][0] = np.clip(self.command_ranges["lin_vel_x"][0] - 0.2, -self.cfg.commands.max_curriculum, 0.)
             self.command_ranges["lin_vel_x"][1] = np.clip(self.command_ranges["lin_vel_x"][1] + 0.2, 0., self.cfg.commands.max_curriculum)
 
@@ -1364,7 +1380,7 @@ class LeggedRobot(BaseTask):
         return torch.sum(torch.square(self.torques - self.last_torques), dim=1)
     
     def _reward_stand_still(self):
-        # Penalize motion at zero commands
+        # Penalize motion at zero commandss
         # print('stand_still: ', torch.abs(self.dof_pos - self.default_dof_pos))
         return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
 

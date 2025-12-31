@@ -39,30 +39,34 @@ class Terrain:
     def __init__(self, cfg: LeggedRobotCfg.terrain, num_robots) -> None:
 
         self.cfg = cfg
-        self.num_robots = num_robots
-        self.type = cfg.mesh_type
-        if self.type in ["none", 'plane']:
+        self.num_robots = num_robots ## 智能体的个数，获取来源是LeggedRobotCfg类下边的env结构体下边的num_envs
+        self.type = cfg.mesh_type ## 赋值地形表示形式
+        if self.type in ["none", 'plane']:  ## 如果地形无指定或者指定为平面则无需进行之后的赋值
             return
-        self.env_length = cfg.terrain_length
+        self.env_length = cfg.terrain_length ## 整个环境由一个又一个局部地形构成，局部地形的长宽进行赋值
         self.env_width = cfg.terrain_width
-        self.proportions = [np.sum(cfg.terrain_proportions[:i+1]) for i in range(len(cfg.terrain_proportions))]
+        ## 地形的累加比例，对于默认参数terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
+        self.proportions = [np.sum(cfg.terrain_proportions[:i+1]) for i in range(len(cfg.terrain_proportions))] 
 
+        ## 生成的地形块个数
         self.cfg.num_sub_terrains = cfg.num_rows * cfg.num_cols
-        self.env_origins = np.zeros((cfg.num_rows, cfg.num_cols, 3))
+        ## 创建一个描述环境的三维数组，数组的大小与地形块的行、列数相关
+        self.env_origins = np.zeros((cfg.num_rows, cfg.num_cols, 3)) 
 
+        ## 根据水平方向的分辨率得到地形长宽方向上有多少个像素（相当于是栅格化了）
         self.width_per_env_pixels = int(self.env_width / cfg.horizontal_scale)
         self.length_per_env_pixels = int(self.env_length / cfg.horizontal_scale)
 
+        ## 地形边界的像素个数
         self.border = int(cfg.border_size/self.cfg.horizontal_scale)
+        ## 最终的综合大环境行像素个数，两侧都有边界
         self.tot_cols = int(cfg.num_cols * self.width_per_env_pixels) + 2 * self.border
+        ## 最终的综合大环境列像素个数，两侧都有边界
         self.tot_rows = int(cfg.num_rows * self.length_per_env_pixels) + 2 * self.border
 
-        # Subterrain gap
-        # self.gap_size_between_envs = self.cfg.gap_size_between_subterrains
-        # self.gap_pixels = int(self.gap_size_between_envs / self.cfg.horizontal_scale)
-
+        ## 初始化高度阈二维数组，数组的维度与行列大小有关
         self.height_field_raw = np.zeros((self.tot_rows , self.tot_cols), dtype=np.int16)
-        if cfg.curriculum:
+        if cfg.curriculum: ## 如果课程变量是true则执行4.2节curiculum函数
             self.curiculum()
         elif cfg.selected:
             self.selected_terrain()
@@ -75,7 +79,7 @@ class Terrain:
                                                                                             self.cfg.horizontal_scale,
                                                                                             self.cfg.vertical_scale,
                                                                                             self.cfg.slope_treshold)
-
+            
     def randomized_terrain(self):
         for k in range(self.cfg.num_sub_terrains):
             # Env coordinates in the world
@@ -111,22 +115,25 @@ class Terrain:
             self.add_terrain_to_map(terrain, i, j)
     
     def make_terrain(self, choice, difficulty):
+        ## 创建一个局部地形，参数包括地形的名字，地形的像素长宽以及分辨率
         terrain = terrain_utils.SubTerrain(   "terrain",
                                 width=self.width_per_env_pixels,
-                                length=self.width_per_env_pixels,
+                                length=self.length_per_env_pixels,
                                 vertical_scale=self.cfg.vertical_scale,
                                 horizontal_scale=self.cfg.horizontal_scale)
-        slope = difficulty * 0.4
-        amplitude = 0.01 + 0.07 * difficulty
-        step_height = 0.05 + 0.18 * difficulty
-        discrete_obstacles_height = 0.05 + difficulty * 0.1
-        stepping_stones_size = 1.5 * (1.05 - difficulty)
-        stone_distance = 0.05 if difficulty==0 else 0.1
-        gap_size = 1. * difficulty
-        pit_depth = 1. * difficulty
-        if choice < self.proportions[0]:
-            if choice < self.proportions[0]/ 2:
+        slope = difficulty * 0.4  ## slope坡度与难度正相关
+        amplitude = 0.01 + 0.07 * difficulty  
+        step_height = 0.05 + 0.18 * difficulty  ## 台阶高度也与难度正相关
+        discrete_obstacles_height = 0.05 + difficulty * 0.1  ## 离散障碍物的高度也也与难度正相关
+        stepping_stones_size = 1.5 * (1.05 - difficulty)  ## 石头的大小和难度负相关
+        stone_distance = 0.05 if difficulty==0 else 0.1  ## 设定石头之间的距离
+        gap_size = 1. * difficulty  ## 沟的尺寸和难度正相关
+        pit_depth = 1. * difficulty   ## 坑的尺寸和难度正相关
+        if choice < self.proportions[0]:  ## 如果落在第一区间则生成平坦坡
+            if choice < self.proportions[0]/ 2:  ## 在第一区间的前一半生成下坡
                 slope *= -1
+            ## issacgym提供的api，其中第一个参数是地形的名称，第二个参数是坡度，第三个参数是在地形的中间生成一个平台，
+            ## 让机器人初始化的时候落在上边的，这里设置为3m
             terrain_utils.pyramid_sloped_terrain(terrain, slope=slope, platform_size=3.)
         elif choice < self.proportions[1]:
             terrain_utils.pyramid_sloped_terrain(terrain, slope=slope, platform_size=3.)

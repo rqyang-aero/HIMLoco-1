@@ -65,7 +65,6 @@ class BaseTask():
         self.height_map_shape = cfg.env.height_map_shape
         self.height_map_real_H = cfg.env.height_map_real_H
 
-
         # optimization flags for pytorch JIT
         torch._C._jit_set_profiling_mode(False)
         torch._C._jit_set_profiling_executor(False)
