@@ -57,6 +57,10 @@ class Terrain:
         self.tot_cols = int(cfg.num_cols * self.width_per_env_pixels) + 2 * self.border
         self.tot_rows = int(cfg.num_rows * self.length_per_env_pixels) + 2 * self.border
 
+        # Subterrain gap
+        # self.gap_size_between_envs = self.cfg.gap_size_between_subterrains
+        # self.gap_pixels = int(self.gap_size_between_envs / self.cfg.horizontal_scale)
+
         self.height_field_raw = np.zeros((self.tot_rows , self.tot_cols), dtype=np.int16)
         if cfg.curriculum:
             self.curiculum()
@@ -71,7 +75,7 @@ class Terrain:
                                                                                             self.cfg.horizontal_scale,
                                                                                             self.cfg.vertical_scale,
                                                                                             self.cfg.slope_treshold)
-    
+
     def randomized_terrain(self):
         for k in range(self.cfg.num_sub_terrains):
             # Env coordinates in the world
@@ -153,10 +157,19 @@ class Terrain:
         end_x = self.border + (i + 1) * self.length_per_env_pixels
         start_y = self.border + j * self.width_per_env_pixels
         end_y = self.border + (j + 1) * self.width_per_env_pixels
+        # start_x = self.border + i * (self.length_per_env_pixels + self.gap_pixels)
+        # end_x = start_x + self.length_per_env_pixels
+
+        # start_y = self.border + j * (self.width_per_env_pixels + self.gap_pixels)
+        # end_y = start_y + self.width_per_env_pixels
+
         self.height_field_raw[start_x: end_x, start_y:end_y] = terrain.height_field_raw
 
         env_origin_x = (i + 0.5) * self.env_length
         env_origin_y = (j + 0.5) * self.env_width
+        # env_origin_x = (i + 0.5) * (self.env_length + self.gap_size_between_envs)
+        # env_origin_y = (j + 0.5) * (self.env_width + self.gap_size_between_envs)
+
         x1 = int((self.env_length/2. - 1) / terrain.horizontal_scale)
         x2 = int((self.env_length/2. + 1) / terrain.horizontal_scale)
         y1 = int((self.env_width/2. - 1) / terrain.horizontal_scale)

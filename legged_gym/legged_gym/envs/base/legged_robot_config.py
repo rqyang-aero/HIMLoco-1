@@ -35,7 +35,12 @@ class LeggedRobotCfg(BaseConfig):
         num_envs = 4096
         num_one_step_observations = 45
         num_observations = num_one_step_observations * 6
-        num_one_step_privileged_obs = 45 + 3 + 3 + 187 # additional: base_lin_vel, external_forces, scan_dots
+        height_map_shape = (1, 19, 11) # (channels, height, width)
+        num_height_map_scans = height_map_shape[0] * height_map_shape[1] * height_map_shape[2]
+        # num_additional_obs = 3 + 3 + 3 + 1 + 1 + 3 + 4 # additional: base_lin_vel, external_forces, center_of_mass, friction_coeff, payload, kp, kd, motor_strength, contact_indicators
+        num_additional_obs = 3 + 3  # additional: base_lin_vel, external_forces, center_of_mass, friction_coeff, payload, kp, kd, motor_strength, contact_indicators
+        num_one_step_privileged_obs = 45 + num_additional_obs + num_height_map_scans # additional: base_lin_vel, external_forces, scan_dots
+        height_map_real_H = 19
         num_privileged_obs = num_one_step_privileged_obs * 1 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -53,7 +58,7 @@ class LeggedRobotCfg(BaseConfig):
         restitution = 0.
         # rough terrain only:
         measure_heights = True
-        measured_points_x = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8] # 1mx1.6m rectangle (without center line)
+        measured_points_x = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] # 1mx1.6m rectangle (without center line)
         measured_points_y = [-0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5]
         selected = False # select a unique terrain type and pass all arguments
         terrain_kwargs = None # Dict of arguments for selected terrain
@@ -66,6 +71,7 @@ class LeggedRobotCfg(BaseConfig):
         terrain_proportions = [0.1, 0.2, 0.3, 0.3, 0.1]
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
+        # gap_size_between_subterrains = 1 # [m]
 
     class commands:
         curriculum = True
@@ -176,6 +182,9 @@ class LeggedRobotCfg(BaseConfig):
             feet_stumble = -0.0 
             action_rate = -0.01
             stand_still = -0.
+            stand_contact = -1.0
+            stand_yawvel = -0.5
+            delta_torques = -1.0e-7
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
@@ -240,6 +249,8 @@ class LeggedRobotCfgPPO(BaseConfig):
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [512, 256, 128]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+        self_attn = False
+        vel_est = True
         # only for 'ActorCriticRecurrent':
         # rnn_type = 'lstm'
         # rnn_hidden_size = 512
@@ -261,12 +272,14 @@ class LeggedRobotCfgPPO(BaseConfig):
         max_grad_norm = 1.
 
     class runner:
-        policy_class_name = 'HIMActorCritic'
+        # policy_class_name = 'HIMActorCritic'
+        policy_class_name = 'AttnActorCritic'
         algorithm_class_name = 'HIMPPO'
         num_steps_per_env = 100 # per iteration
         max_iterations = 200000 # number of policy updates
 
         # logging
+        project_name = 'VisualLoco_a01b'
         save_interval = 20 # check for potential saves every this many iterations
         experiment_name = 'test'
         run_name = ''

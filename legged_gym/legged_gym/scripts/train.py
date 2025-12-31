@@ -1,3 +1,11 @@
+'''
+Author: Your Name you@example.com
+Date: 2025-04-25 21:46:16
+LastEditors: Your Name you@example.com
+LastEditTime: 2025-04-29 14:50:45
+FilePath: /HIMLoco_bk/legged_gym/legged_gym/scripts/train.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 # SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 # 
@@ -38,8 +46,12 @@ from legged_gym.utils import get_args, task_registry
 import torch
 
 def train(args, headless=True):
+    # args.resume = False
+    if args.resume:
+        args.resume = True
+    else:
+        args.resume = False
     args.headless = headless
-    args.resume = False
     env, env_cfg = task_registry.make_env(name=args.task, args=args)
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args)
     ppo_runner.learn(num_learning_iterations=train_cfg.runner.max_iterations, init_at_random_ep_len=True)

@@ -1,12 +1,16 @@
 ## Learning-based Locomotion Control from OpenRobotLab
+
 This repository contains learning-based locomotion control research from OpenRobotLab, currently including [Hybrid Internal Model](/projects/himloco/README.md) & [H-Infinity Locomotion Control](/projects/h_infinity/README.md).
+
 ## 🔥 News
+
 - [2024-04] Code of HIMLoco is released.
 - [2024-04] We release the [paper](https://arxiv.org/abs/2404.14405) of H-Infinity Locomotion Control. Please check the :point_right: [webpage](https://junfeng-long.github.io/HINF/) :point_left: and view our demos! :sparkler:
 - [2024-01] HIMLoco is accepted by ICLR 2024.
 - [2023-12] We release the [paper](https://arxiv.org/abs/2312.11460) of HIMLoco. Please check the :point_right: [webpage](https://junfeng-long.github.io/HIMLoco/) :point_left: and view our demos! :sparkler:
 
 ## 📝 TODO List
+
 - \[x\] Release the training code of HIMLoco, please see `rsl_rl/rsl_rl/algorithms/him_ppo.py`.
 - \[ \] Release deployment guidance of HIMLoco.
 - \[ \] Release the training code of H-Infinity Locomotion Control.
@@ -27,23 +31,25 @@ We test our codes under the following environment:
 
 1. Create an environment and install PyTorch:
 
-  - `conda create -n himloco python=3.7.16`
-  - `conda activate himloco`
-  - `pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html`
+- `conda create -n himloco python=3.7.16`
+- `conda activate himloco`
+- `pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html`
 
 2. Install Isaac Gym:
-  - Download and install Isaac Gym Preview 4 from https://developer.nvidia.com/isaac-gym
-  - `cd isaacgym/python && pip install -e .`
+
+- Download and install Isaac Gym Preview 4 from https://developer.nvidia.com/isaac-gym
+- `cd isaacgym/python && pip install -e .`
 
 3. Clone this repository.
 
-  - `git clone https://github.com/OpenRobotLab/HIMLoco.git`
-  - `cd HIMLoco`
-
+- `git clone https://github.com/OpenRobotLab/HIMLoco.git`
+- `cd HIMLoco`
 
 4. Install HIMLoco.
-  - `cd rsl_rl && pip install -e .`
-  - `cd ../legged_gym && pip install -e .`
+
+- `cd rsl_rl && pip install -e .`
+- `cd ../legged_gym && pip install -e .`
+- `pip install tensorboard==2.12.0 (默认的tensorboard版本有问题)`
 
 **Note:** Please use legged_gym and rsl_rl provided in this repo, we have modefications on these repos.
 
@@ -51,13 +57,14 @@ We test our codes under the following environment:
 
 1. Train a policy:
 
-  - `cd legged_gym/legged_gym/scripts`
-  - `python train.py`
+- `cd legged_gym/legged_gym/scripts`
+- 后台训练：`nohup python train.py --task A01b --experiment_name xxxx --headless > xxxx-log.txt 2>&1 &`
+- 普通：`python train.py --task A01b --experiment_name xxxx --headless`
 
 2. Play and export the latest policy:
-  - `cd legged_gym/legged_gym/scripts`
-  - `python play.py`
 
+- `cd legged_gym/legged_gym/scripts`
+- `python play.py --task A01b --experiment_name test --load_run test --checkpoint 7300 --num_env 1` - 用现在的代码训练的模型，测试用例
 
 ## 🔗 Citation
 
@@ -81,9 +88,11 @@ If you find our work helpful, please cite:
 ```
 
 ## 📄 License
+
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" /></a>
 <br />
 This work is under the <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
 
 ## 👏 Acknowledgements
+
 - [legged_gym](https://github.com/leggedrobotics/legged_gym): Our codebase is built upon legged_gym.
