@@ -1,0 +1,40 @@
+{
+  "os":  "Linux-5.15.0-139-generic-x86_64-with-glibc2.17",
+  "python":  "CPython 3.8.20",
+  "startedAt":  "2025-12-31T14:24:57.414469Z",
+  "program":  "/home/barry/VisualLOCO_linxai/VL_a01b/visualLoco_a01b/legged_gym/legged_gym/scripts/train.py",
+  "codePath":  "legged_gym/legged_gym/scripts/train.py",
+  "codePathLocal":  "legged_gym/legged_gym/scripts/train.py",
+  "git":  {
+    "remote":  "https://github.com/rqyang-aero/HIMLoco-1.git",
+    "commit":  "9da9120dfba0c9fd19d7204f4f96f1a9f4d489dd"
+  },
+  "email":  "runchiuyang@gmail.com",
+  "root":  "/home/barry/VisualLOCO_linxai/VL_a01b/visualLoco_a01b",
+  "host":  "barry-System-Product-Name",
+  "executable":  "/home/barry/anaconda3/envs/vl_a01b/bin/python",
+  "cpu_count":  14,
+  "cpu_count_logical":  20,
+  "gpu":  "NVIDIA GeForce RTX 4070 Ti SUPER",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "1006450962432",
+      "used":  "610172252160"
+    }
+  },
+  "memory":  {
+    "total":  "33451171840"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce RTX 4070 Ti SUPER",
+      "memoryTotal":  "17171480576",
+      "cudaCores":  8448,
+      "architecture":  "Ada",
+      "uuid":  "GPU-5a5964d7-7cb3-36d9-33e7-dc9937aba47a"
+    }
+  ],
+  "cudaVersion":  "12.8",
+  "writerId":  "9tck3zbycikukd7aynwqx3bwwj30472p"
+}
